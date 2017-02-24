@@ -1,0 +1,30 @@
+<html>
+  <head>
+    <script src="./dist/hardlock.min.js"></script>
+  </head>
+  <body>
+    <script>
+      document.write('Working... ');
+      setTimeout(function () {
+        var encoder = new TextEncoder('ascii');
+        var hl = new HardLock(5, encoder.encode('testsalt'), encoder.encode('challengevaluegoesherelikecsrf'));
+        var start = new Date();
+        var results = hl.work();
+        var end = new Date();
+        document.write('Done.<br />');
+        document.write(String(end - start) + 'ms<br />');
+        document.write(results.nonces[0]);
+        document.write('<br />');
+        document.write(results.nonces[1]);
+        document.write('<br />');
+        var verified = hl.verify(results.nonces);
+        if (verified) {
+          document.write('Verified.');
+        } else {
+          document.write('Verify failed.');
+        }
+        document.write('<br />');
+      }, 50)
+    </script>
+  </body>
+</html>

@@ -1,0 +1,41 @@
+{
+  "name": "hardlock",
+  "version": "0.0.1",
+  "description": "Hardlock is a proof-of-work algorithm in the same vein as equihash, intended for increasing the cost of exploiting compromised credentials lists.",
+  "main": "src/hardlock.js",
+  "dependencies": {
+    "blake2s-js": "^1.2.2"
+  },
+  "devDependencies": {
+    "babel-preset-es2015": "^6.22.0",
+    "browserify": "^13.0.0",
+    "grunt": "^1.0.1",
+    "grunt-babel": "^6.0.0",
+    "grunt-browserify": "^5.0.0",
+    "grunt-contrib-clean": "^1.0.0",
+    "grunt-contrib-copy": "^1.0.0",
+    "grunt-contrib-jshint": "^1.0.0",
+    "grunt-contrib-requirejs": "^1.0.0",
+    "grunt-contrib-uglify": "2.x.x",
+    "grunt-contrib-watch": "^1.0.0",
+    "uglify-js": "2.x.x"
+  },
+  "scripts": {
+    "build": "grunt",
+    "test": "grunt test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sporkmonger/hardlock.git"
+  },
+  "keywords": [
+    "proof-of-work",
+    "security"
+  ],
+  "author": "Bob Aman <bob@sporkmonger.com>",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/sporkmonger/hardlock/issues"
+  },
+  "homepage": "https://github.com/sporkmonger/hardlock#readme"
+}
