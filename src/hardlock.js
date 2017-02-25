@@ -2,6 +2,26 @@
 
 const blake2 = require('blake2s-js');
 
+var insideNode = false;
+if ((typeof process !== 'undefined') &&
+    (typeof process.release !== 'undefined') &&
+    (process.release.name === 'node')) {
+  insideNode = true;
+}
+var insideWebWorker = false;
+if (insideNode) {
+  // Node.js, therefore not a WebWorker.
+  insideWebWorker = false;
+} else if (typeof document === 'undefined') {
+  // WebWorkers have window but not window.document.
+  insideWebWorker = true;
+}
+var workableOrigin = false;
+if (!insideNode && !insideWebWorker && typeof location !== 'undefined' &&
+    typeof location.origin === 'string' && location.origin.startsWith('http')) {
+  workableOrigin = true;
+}
+
 var decode;
 if (typeof TextDecoder !== 'undefined') {
   decode = function (value) {
@@ -23,7 +43,8 @@ if (typeof TextDecoder !== 'undefined') {
 }
 
 class HardLock {
-  constructor(difficulty, salt, key) {
+  constructor(difficulty, salt, key, workerFile) {
+    this.workerFile = workerFile;
     this.difficulty = difficulty;
     this.salt = salt;
     this.key = key;
@@ -53,7 +74,36 @@ class HardLock {
     }
   }
 
-  work() {
+  static onmessage(event) {
+    try {
+      var params = JSON.parse(event.data);
+      if (typeof params.difficulty !== 'undefined' &&
+          typeof params.salt !== 'undefined' &&
+          typeof params.key !== 'undefined') {
+        var salt = new Uint8Array(8);
+        var key = new Uint8Array(Object.keys(params.key).length);
+        for (var i = 0; i < 8; i++) {
+          salt[i] = params.salt[String(i)] || params.salt[i];
+        }
+        for (i = 0; i < Object.keys(params.key).length; i++) {
+          key[i] = params.key[String(i)] || params.key[i];
+        }
+        var hl = new HardLock(params.difficulty, salt, key);
+        hl.work().then(function (results) {
+          global.postMessage(JSON.stringify(results));
+        }).catch(function (reason) {
+          global.postMessage(JSON.stringify({
+            "error": reason
+          }));
+        });
+      }
+    } catch(err) {
+      // Was this message meant for us?
+      console.error(err);
+    }
+  }
+
+  workSync() {
     var set = {};
     var digest = null;
     var nonce = null;
@@ -74,7 +124,66 @@ class HardLock {
         break;
       }
     }
-    return {digest: digest, nonces: [nonce, set[decode(digest)]] };
+    return {digest: digest, nonces: [nonce, set[decode(digest)]]};
+  }
+
+  work() {
+    var _this = this;
+    return new Promise(function(resolve, reject) {
+      if (_this.workerFile !== null && !insideWebWorker && !insideNode &&
+          workableOrigin && typeof Worker === 'function') {
+        // Don't actually do the work here. Do it in a web worker.
+        // NOTE: This file itself is a web worker!
+        console.debug('HardLock#work using WebWorker.');
+        var params = {
+          difficulty: _this.difficulty,
+          salt: _this.salt,
+          key: _this.key
+        };
+        var message = JSON.stringify(params);
+        var worker = new Worker(_this.workerFile || 'hardlock.min.js');
+        var results;
+        worker.onmessage = function (event) {
+          try {
+            var rawResults = JSON.parse(event.data);
+            results = {
+              digest: null,
+              nonces: []
+            };
+
+            var digest = new Uint8Array(_this.difficulty);
+            for (var i = 0; i < 8; i++) {
+              digest[i] = rawResults.digest[String(i)] || rawResults.digest[i];
+            }
+            for (var rawNonce of rawResults.nonces) {
+              var nonce = new Uint8Array(32);
+              for (i = 0; i < 32; i++) {
+                nonce[i] = rawNonce[String(i)] || rawNonce[i];
+              }
+              results.nonces.push(nonce);
+            }
+
+            if (typeof results.nonces !== 'undefined') {
+              var hl = new HardLock(params.difficulty, params.salt, params.key);
+              var verified = hl.verify(results.nonces);
+              if (verified) {
+                return resolve(results);
+              } else {
+                return reject("HardLock result did not verify");
+              }
+            }
+          } catch (err) {
+            // Was this message meant for us?
+            return reject(err);
+          }
+        };
+        worker.postMessage(message);
+      } else {
+        setTimeout(function () {
+          return resolve(_this.workSync());
+        }, 1);
+      }
+    });
   }
 
   verify(nonces) {
@@ -94,5 +203,9 @@ class HardLock {
 
 if (typeof window !== 'undefined') {
   window.HardLock = HardLock;
+}
+if (insideWebWorker) {
+  // We don't want to make the browser unresponsive while working.
+  global.onmessage = HardLock.onmessage;
 }
 module.exports = HardLock;

@@ -8,8 +8,10 @@ challenge value supplied by the server plus nonces supplied by the client. The
 client must find a pair of nonces that results in a hash collision. Hash length
 is set to an unusually small value in order to make hash collisions possible in
 the expected time period. Each increase in difficulty factor is an order of
-magnitude more difficult than the previous value. A good difficulty factor for
-typical usage is 3 or 4.
+magnitude more difficult than the previous value. This could be made more
+fine-grained by using a longer hash and looking for hash collision prefixes at
+the bit level. I was too lazy to bother. A good difficulty factor for typical
+usage is 3 or 4.
 
 HardLock is a proof-of-concept and probably should not be used in production.
 I'm not even sure if it will really prevent the types of attacks it's intended

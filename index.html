@@ -5,11 +5,11 @@
   <body>
     <script>
       document.write('Working... ');
-      setTimeout(function () {
-        var encoder = new TextEncoder('ascii');
-        var hl = new HardLock(5, encoder.encode('testsalt'), encoder.encode('challengevaluegoesherelikecsrf'));
-        var start = new Date();
-        var results = hl.work();
+      var encoder = new TextEncoder('ascii');
+      var hl = new HardLock(4, encoder.encode('testsalt'), encoder.encode('challengevaluegoesherelikecsrf'), './dist/hardlock.min.js');
+      var start = new Date();
+      var promise = hl.work();
+      promise.then(function (results) {
         var end = new Date();
         document.write('Done.<br />');
         document.write(String(end - start) + 'ms<br />');
@@ -24,7 +24,14 @@
           document.write('Verify failed.');
         }
         document.write('<br />');
-      }, 50)
+      }).catch(function (error) {
+        var end = new Date();
+        document.write('Done.<br />');
+        document.write(String(end - start) + 'ms<br />');
+        document.write('Promise returned error.<br />');
+        document.write(error);
+        document.write('<br />');
+      })
     </script>
   </body>
 </html>
