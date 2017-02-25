@@ -26,7 +26,7 @@ may not be an acceptable trade-off.
 npm install -g serve
 serve
 ```
-Navigate to http://localhost:3000/
+Navigate to [http://localhost:3000/](http://localhost:3000/)
 
 NOTE: If you open index.html directly via file://, you will not be able to use
 Web Workers for background computation and the browser may become unresponsive.
