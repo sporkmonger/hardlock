@@ -31,3 +31,22 @@ Navigate to [http://localhost:3000/](http://localhost:3000/)
 NOTE: If you open index.html directly via file://, you will not be able to use
 Web Workers for background computation and the browser may become unresponsive.
 It will, however, otherwise work as intended.
+
+# Usage
+
+```js
+var base64 = require('base64-js');
+var encoder = new TextEncoder('ascii');
+var hl = new HardLock(4, encoder.encode('testsalt'), encoder.encode('challengevaluegoesherelikecsrf'), './dist/hardlock.min.js');
+hl.work().then(function (results) {
+  var encodedNonces =
+    base64.fromByteArray(encoder.encode(results.nonces[0])) + "|" +
+    base64.fromByteArray(encoder.encode(results.nonces[1]));
+  document.getElementById('nonces').value = encodedNonces;
+}).catch(function (error) {
+  // WARNING: The user will not be able to successfully submit the form if this
+  // happens. You should notify the user as appropriate and probably log this
+  // whereever you track client-side errors.
+  console.error(error);
+})
+```
