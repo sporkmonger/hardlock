@@ -4,6 +4,7 @@
   "description": "Hardlock is a proof-of-work algorithm in the same vein as equihash, intended for increasing the cost of exploiting compromised credentials lists.",
   "main": "src/hardlock.js",
   "dependencies": {
+    "base64-js": "^1.2.0",
     "blake2s-js": "^1.2.2"
   },
   "devDependencies": {

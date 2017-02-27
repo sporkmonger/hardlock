@@ -5,8 +5,7 @@
   <body>
     <script>
       document.write('Working... ');
-      var encoder = new TextEncoder('ascii');
-      var hl = new HardLock(4, encoder.encode('testsalt'), encoder.encode('challengevaluegoesherelikecsrf'), './dist/hardlock.min.js');
+      var hl = new HardLock(3, 'testsalt', 'challengevaluegoesherelikecsrf', './dist/hardlock.min.js');
       var start = new Date();
       var promise = hl.work();
       promise.then(function (results) {
@@ -17,6 +16,9 @@
         document.write('<br />');
         document.write(results.nonces[1]);
         document.write('<br />');
+        document.write(results.encoded);
+        document.write('<br />');
+
         var verified = hl.verify(results.nonces);
         if (verified) {
           document.write('Verified.');

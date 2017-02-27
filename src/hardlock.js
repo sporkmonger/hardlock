@@ -1,6 +1,7 @@
 /* jshint esversion: 6 */
 
 const blake2 = require('blake2s-js');
+const base64 = require('base64-js');
 
 var insideNode = false;
 if ((typeof process !== 'undefined') &&
@@ -22,31 +23,29 @@ if (!insideNode && !insideWebWorker && typeof location !== 'undefined' &&
   workableOrigin = true;
 }
 
-var decode;
-if (typeof TextDecoder !== 'undefined') {
-  decode = function (value) {
-    return new TextDecoder('US-ASCII').decode(value);
-  };
-} else {
-  try {
-    const StringDecoder = require('string_decoder').StringDecoder;
-    const decoder = new StringDecoder('ascii');
-    decode = function (value) {
-      return decoder.write(Buffer.from(value));
-    };
-  } catch(err) {
-    // Just fall back to .toString() since we're using this for set checks
-    decode = function (value) {
-      return value.toString();
-    };
+function arr2str(arr) {
+  return String.fromCharCode.apply(null, new Uint8Array(arr));
+}
+
+function str2arr(str) {
+  var arr = new Uint8Array(str.length);
+  for (var i = 0, strLen = str.length; i < strLen; i++) {
+    arr[i] = str.charCodeAt(i);
   }
+  return arr;
 }
 
 class HardLock {
   constructor(difficulty, salt, key, workerFile) {
     this.workerFile = workerFile;
     this.difficulty = difficulty;
+    if (typeof salt === 'string') {
+      salt = str2arr(salt);
+    }
     this.salt = salt;
+    if (typeof key === 'string') {
+      key = str2arr(key);
+    }
     this.key = key;
     this.personalization =
       new Uint8Array([0x68, 0x61, 0x72, 0x64, 0x6c, 0x6f, 0x63, 0x6b]);
@@ -72,6 +71,14 @@ class HardLock {
         return nonce;
       };
     }
+  }
+
+  static encode(nonces) {
+    var segments = [];
+    for (var i = 0; i < nonces.length; i++) {
+      segments.push(base64.fromByteArray(nonces[i]));
+    }
+    return segments.join(",");
   }
 
   static onmessage(event) {
@@ -116,15 +123,16 @@ class HardLock {
       nonce = this.randomBytes();
       hash.update(nonce);
       digest = hash.digest();
-      if (!set[decode(digest)]) {
+      if (!set[arr2str(digest)]) {
         // We haven't collided yet. Save this hash and nonce.
-        set[decode(digest)] = nonce;
+        set[arr2str(digest)] = nonce;
       } else {
         // Don't update the set if we have a collision.
         break;
       }
     }
-    return {digest: digest, nonces: [nonce, set[decode(digest)]]};
+    var nonces = [nonce, set[arr2str(digest)]];
+    return {digest: digest, nonces: nonces, encoded: HardLock.encode(nonces)};
   }
 
   work() {
@@ -134,7 +142,6 @@ class HardLock {
           workableOrigin && typeof Worker === 'function') {
         // Don't actually do the work here. Do it in a web worker.
         // NOTE: This file itself is a web worker!
-        console.debug('HardLock#work using WebWorker.');
         var params = {
           difficulty: _this.difficulty,
           salt: _this.salt,
@@ -148,7 +155,8 @@ class HardLock {
             var rawResults = JSON.parse(event.data);
             results = {
               digest: null,
-              nonces: []
+              nonces: [],
+              encoded: ""
             };
 
             var digest = new Uint8Array(_this.difficulty);
@@ -162,6 +170,7 @@ class HardLock {
               }
               results.nonces.push(nonce);
             }
+            results.encoded = rawResults.encoded;
 
             if (typeof results.nonces !== 'undefined') {
               var hl = new HardLock(params.difficulty, params.salt, params.key);
@@ -195,7 +204,7 @@ class HardLock {
         key: this.key
       });
       hash.update(nonces[i]);
-      set[decode(hash.digest())] = true;
+      set[arr2str(hash.digest())] = true;
     }
     return Object.keys(set).length == 1;
   }
