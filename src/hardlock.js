@@ -1,6 +1,6 @@
 /* jshint esversion: 6 */
 
-const blake2 = require('blake2s-js');
+const Hashes = require('jshashes');
 const base64 = require('base64-js');
 
 var insideNode = false;
@@ -81,6 +81,15 @@ class HardLock {
     return segments.join(",");
   }
 
+  static decode(encoded) {
+    var segments = encoded.split(",");
+    var nonces = [];
+    for (var i = 0; i < segments.length; i++) {
+      nonces.push(base64.toByteArray(segments[i]));
+    }
+    return nonces;
+  }
+
   static onmessage(event) {
     try {
       var params = JSON.parse(event.data);
@@ -110,28 +119,51 @@ class HardLock {
     }
   }
 
+  hashNonce(nonce) {
+    var combined = new Uint8Array(
+      this.salt.length +
+      this.personalization.length +
+      this.key.length +
+      nonce.length
+    );
+    var offset = 0;
+    for (var i = 0; i < this.salt.length; i++) {
+      combined[i + offset] = this.salt[i];
+    }
+    offset = this.salt.length;
+    for (i = 0; i < this.personalization.length; i++) {
+      combined[i + offset] = this.personalization[i];
+    }
+    offset = this.personalization.length;
+    for (i = 0; i < this.key.length; i++) {
+      combined[i + offset] = this.key[i];
+    }
+    offset = this.key.length;
+    for (i = 0; i < nonce.length; i++) {
+      combined[i + offset] = nonce[i];
+    }
+    var sha256 = new Hashes.SHA256();
+    var hash = sha256.hex(arr2str(combined));
+    return hash.substring(0, this.difficulty);
+  }
+
   workSync() {
     var set = {};
     var digest = null;
     var nonce = null;
     while (true) {
-      var hash = new blake2(this.difficulty, {
-        salt: this.salt,
-        personalization: this.personalization,
-        key: this.key
-      });
       nonce = this.randomBytes();
-      hash.update(nonce);
-      digest = hash.digest();
-      if (!set[arr2str(digest)]) {
+      digest = this.hashNonce(nonce);
+      if (!set[digest]) {
         // We haven't collided yet. Save this hash and nonce.
-        set[arr2str(digest)] = nonce;
+        set[digest] = nonce;
       } else {
         // Don't update the set if we have a collision.
         break;
       }
     }
-    var nonces = [nonce, set[arr2str(digest)]];
+    var nonces = [nonce, set[digest]];
+    console.debug("Hashes generated:", Object.keys(set).length);
     return {digest: digest, nonces: nonces, encoded: HardLock.encode(nonces)};
   }
 
@@ -196,15 +228,14 @@ class HardLock {
   }
 
   verify(nonces) {
+    if (typeof nonces === 'string') {
+      nonces = HardLock.decode(nonces);
+    }
     var set = {};
     for (var i = 0; i < nonces.length; i++) {
-      var hash = new blake2(this.difficulty, {
-        salt: this.salt,
-        personalization: this.personalization,
-        key: this.key
-      });
-      hash.update(nonces[i]);
-      set[arr2str(hash.digest())] = true;
+      var nonce = nonces[i];
+      var digest = this.hashNonce(nonce);
+      set[digest] = true;
     }
     return Object.keys(set).length == 1;
   }

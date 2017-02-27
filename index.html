@@ -5,7 +5,7 @@
   <body>
     <script>
       document.write('Working... ');
-      var hl = new HardLock(3, 'testsalt', 'challengevaluegoesherelikecsrf', './dist/hardlock.min.js');
+      var hl = new HardLock(5, 'testsalt', 'challengevaluegoesherelikecsrf', './dist/hardlock.min.js');
       var start = new Date();
       var promise = hl.work();
       promise.then(function (results) {
