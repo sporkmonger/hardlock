@@ -40,6 +40,9 @@ It will, however, otherwise work as intended.
 ## Client-side Work
 
 ```js
+// The filename is needed because it's need to run calculation as a web worker.
+// This means that the hardlock.min.js must not be concatenated with other JS
+// files during any kind of asset pipeline process you may be using.
 var hl = new HardLock(5, 'testsalt', 'challengevaluegoesherelikecsrf', './dist/hardlock.min.js');
 hl.work().then(function (results) {
   // Nonces are encoded into base64.
