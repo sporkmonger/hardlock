@@ -40,7 +40,7 @@ It will, however, otherwise work as intended.
 ## Client-side Work
 
 ```js
-var hl = new HardLock(3, 'testsalt', 'challengevaluegoesherelikecsrf', './dist/hardlock.min.js');
+var hl = new HardLock(5, 'testsalt', 'challengevaluegoesherelikecsrf', './dist/hardlock.min.js');
 hl.work().then(function (results) {
   // Nonces are encoded into base64.
   document.getElementById('nonces').value = results.encoded;
@@ -55,7 +55,7 @@ hl.work().then(function (results) {
 ## Server-side Verification
 
 ```js
-var hl = new HardLock(3, 'testsalt', 'challengevaluegoesherelikecsrf');
+var hl = new HardLock(5, 'testsalt', 'challengevaluegoesherelikecsrf');
 var nonces = req.body.nonces;
 var verified = hl.verify(nonces);
 ```
